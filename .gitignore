@@ -1,0 +1,4 @@
+# Ignore all Stata and Excel files anywhere in the repo
+**/*.dta
+**/*.xlsx
+**/*.docx
