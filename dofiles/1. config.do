@@ -7,7 +7,7 @@
 ********************************************************************************
 
 * 1. Define working directory
-global projet "C:\Users\fajmi\OneDrive - GOUVCI\Etude_OIT_Estimation_Salaire_Vital\Analyse\SAW_April_2025" // Insert the working path
+global projet "C:\Users\f.migone\OneDrive - GOUVCI\Etude_OIT_Estimation_Salaire_Vital\Analyse\SAW_ANSTAT_April_2025" // Insert the working path
 
 * 2. Directory paths
 *-------------------
@@ -15,7 +15,7 @@ global projet "C:\Users\fajmi\OneDrive - GOUVCI\Etude_OIT_Estimation_Salaire_Vit
 global data "$projet\data" // Insert the path from the raw data
 global outpts "$projet\outpts" // Insert the path to the outputs (Excel File)
 global temp "$projet\temp" // Insert the path to the temporary files
-global do_files "$projet\dofiles"
+global do_files "$projet\dofiles_OIT_LW"
 *global do_files `"/Users/erika_chaparro/Downloads/wb_data/02_world_bank_mplcs-hh_member.dta"' // Insert the path to the do-files
 
 

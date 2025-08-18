@@ -106,7 +106,6 @@ duplicates drop
 
 save "${temp}/aeq_temp.dta", replace
 
-
 use "${temp}\aeq_temp.dta", clear 
 merge 1:1 grappe menage using "${data}/ehcvm_welfare_2b_CIV2021.dta", keepusing(region milieu hhsize hhweight)
 gen hhsize2 = hhsize
