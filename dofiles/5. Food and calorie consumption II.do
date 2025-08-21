@@ -11,7 +11,7 @@
 * Recall food file
 *use "${temp}/food_data_hh.dta", clear
 use "${temp}/food_consumption_hh.dta", clear //Utiliser la conso interieure
-
+  
 * 3.Estimate calorie intake
 *--------------------------
 
@@ -28,10 +28,13 @@ drop _merge
 *keep $var_lst_hh /*FOOD_ITEM_VARIABLE*/ price q_kg_adj cal prot fat
 keep $var_lst_hh food_item price q_kg_adj fd_kcal fd_pro fd_fat 
 sort $var_lst_hh food_item
+*gen cal_int_hh=q_kg_adj*fd_kcal*10
 gen cal_int_hh=q_kg_adj*fd_kcal*10
-egen cal_cons_hh = total(cal_int_hh), by($var_lst_hh)
+egen cal_cons_hh = total(cal_int_hh), by($var_lst_hh food_item) //
+egen cal_cons_hh_bit = total(cal_int_hh), by($var_lst_hh)
 gen cal_day=cal_cons_hh/7
-*duplicates drop grappe menage, force
+gen cal_day_bit = cal_cons_hh_bit/7
+*duplicates drop grappe menage, force (Ligne de base)
 save "${temp}/cal_hh_temp.dta", replace
 
 
@@ -70,8 +73,9 @@ save "${temp}/cal_hh_temp.dta", replace
 	*replace quantity_Kg=f_exp_ext/med_depan_kg
 
 	* Estimate calories for purchased food and estimate prices per calorie/ by food item
+	//Estimez les calories pour les aliments achetés et estimez les prix par calorie/par aliment
 	gen caloriesintake=quantity_Kg*fd_kcal*10 //(Multiplier par 10)
-	drop if quantity_Kg==.
+	*drop if quantity_Kg==.
 	drop if caloriesintake==.
 	gen price_percal=f_exp_int/caloriesintake
 	drop if price_percal==.
@@ -96,6 +100,7 @@ save "${temp}/cal_hh_temp.dta", replace
 	egen medianprice=median(price_percal_hh)
 
 	* Estimate calorie consumption from fafh using price per calorie
+	//Estimez la consommation de calories à partir de fafh à l'aide du prix par calorie
 	gen cal_fafh_m=fafh_exp_month/price_percal_hh //Quantité de calorie par ménage
 	replace cal_fafh_m=fafh_exp_month/medianprice if price_percal_hh==.
 	gen cal_fafh_d=(cal_fafh_m*12)/365
@@ -107,22 +112,34 @@ save "${temp}/cal_hh_temp.dta", replace
 use "${temp}/cal_hh_temp.dta", clear
 *collapse (sum) cal_day , by(grappe menage)
 merge m:1 $var_lst_hh using "${temp}/cal_fafh_temp.dta"
+keep if _merge==3
 drop _merge
 save "${temp}/cal_intake_total_hh.dta", replace
-keep $var_lst_hh cal_fafh_d cal_day
-duplicates drop
+*keep $var_lst_hh cal_fafh_d cal_day
+*duplicates drop
 replace cal_fafh_d=0 if cal_fafh_d==.
 replace cal_day=0 if cal_day==.
 
-*drop if missing(food_item)
-
 * Calculate total calorie intake by hh
-egen cal_int_d= rowtotal(cal_day cal_fafh_d)
-drop cal_fafh_d cal_day
+egen cal_day_sum=sum(cal_day), by($var_lst_hh)
+egen cal_day_sum_test=total(cal_day), by($var_lst_hh)
 
+egen cal_int_d= rowtotal(cal_day_sum cal_fafh_d)
+egen cal_int_bit= rowtotal(cal_day_bit cal_fafh_d)
+*drop cal_fafh_d cal_day
+drop if cal_int_d==0
 * Calculate calorie intake per adult equivalent
-merge 1:1 $var_lst_hh using "${temp}/aeq_temp.dta"
-drop _merge 
+merge m:1 $var_lst_hh using "${temp}/aeq_temp.dta"
+drop _merge
 gen cal_day_aeq=cal_int_d/aeq_cal_hh
-keep $var_lst_hh cal_day_aeq
-save "${temp}/cal_intake.dta", replace
+gen cal_day_aeq_2=cal_day/aeq_cal_hh
+
+replace food_item=300 if food_item==.
+label define s07bq01 300 "Outside consumption", add
+
+*keep $var_lst_hh cal_day_aeq cal_day_aeq_2 food_item cal_day_sum
+drop if missing(cal_day_aeq)
+save "${temp}/cal_intake_foot.dta", replace
+keep $var_lst_hh cal_day_aeq cal_int_d aeq_cal_hh
+duplicates drop $var_lst_hh, force
+save "${temp}/cal_intake_hh.dta", replace

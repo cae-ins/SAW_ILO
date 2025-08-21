@@ -18,7 +18,7 @@
 	(codpr==645 | codpr==656) | /// Pélérinage, formation, frais particulier, bijoux de luxe
 	(codpr>=774 & codpr<=777) | ///Hospitalisation, accouchement, correcteur, béquille
 	(codpr>=901) ///Dépenses fêtes et cérémonies
-
+*/
 	gen poste_depense=.
 	replace poste_depense =1 if ( (codpr >= 1 & codpr<=163) | (codpr>=166 & codpr<=177) | (codpr>=191 & codpr<=196) | codpr==217 | codpr==333 )
 	replace poste_depense =2 if ( codpr==164 | codpr==165 | codpr==197 | codpr==201 | codpr==301 | codpr==302)		
