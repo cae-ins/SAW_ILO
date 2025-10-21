@@ -28,16 +28,20 @@ sort /*FOOD_ITEM_VARIABLE*/
 drop /*FOOD_ITEM_VARIABLE*/=/*ALCOHOLIC_VARIABLES*/
 */
 	use "$data\s07b_me_CIV2021.dta", clear
+	merge m:1 grappe menage using "${data}/ehcvm_welfare_2b_CIV2021.dta" ,keepusing (region)
+	keep if region == 1 // Pour ne rester que dans Abidjan
+	drop _merge
 	keep if s07bq02==1
 	preserve
 		use "${data}/ehcvm_nsu_CIV2021.dta", clear
+		keep if s00q01 == 1 // Pour ne rester que dans Abidjan
 		rename (produitID uniteID tailleID) (food_item unite taille)
 		collapse (median) poids, by(food_item unite taille)
 		sort food_item unite taille
-		save "${temp}/base_nsu_nat.dta", replace
+		save "${temp}/base_nsu_abj.dta", replace
 	restore
 	rename (s07bq01 s07bq03a s07bq03b s07bq03c) (food_item qte unite taille)
-	merge m:1 food_item unite taille using "${temp}/base_nsu_nat.dta"
+	merge m:1 food_item unite taille using "${temp}/base_nsu_abj.dta"
 	keep if _merge==3
 	drop _merge
 	
@@ -62,27 +66,185 @@ save "${temp}/median_price.dta", replace
 
 * 3.1 Create a database with the food items for the households in quintile X
 //3.1 Créer une base de données avec les produits alimentaires pour les ménages du quintile X
-use "${temp}/cal_hh_temp.dta", clear
+use "${temp}/cal_intake_foot.dta", clear
 merge m:1 $var_lst_hh using "${temp}/expenditures_temp.dta"
+sort  $var_lst_hh food_item
 drop if _merge==2
 drop _merge
-merge m:1 $var_lst_hh using "${temp}/cal_intake.dta"
-*keep if _merge==3
-drop _merge
+merge m:1 food_item using "${temp}/median_price.dta"
+keep if _merge==3
+gen cons_tot_kq_aeq=q_kg_adj/aeq_cal_hh
+gen cons_tot_kg_aeq_daily= cons_tot_kq_aeq /7
 
-tabstat cal_day_aeq  if food_item!=300 [aw=hhweight], by( quintile)
-tabstat cal_day_aeq  [aw=hhweight], by( quintile)
-
+gen cal_int = fd_kcal * cons_tot_kg_aeq_daily * 10
+gen diff_cal = cal_int - cal_day_aeq_2
+egen conso_cal_aeq_daily = sum(cal_int), by(grappe menage)
+/*
+tabstat cal_day_aeq  if food_item!=300 [aw=hhweight*hhsize], by( quintile)
+tabstat cal_day_aeq  [aw=hhweight*hhsize], by( quintile)
+*/
 
 //Quintile de référence
-keep if quintile==3 //Quintile dont la quantité de calorie est de 2300kcal qui correspond au seuil de pauvreté
-keep $var_lst_hh food_item
-gen y=1
+keep if quintile==5 //Quintile dont la quantité de calorie est de 2300kcal qui correspond au seuil de pauvreté
+*keep $var_lst_hh food_item
+
+*Consommation calorique du quintile 3 sans les fafh
+local coef
+preserve 
+	duplicates drop $var_lst_hh, force 
+	summarize conso_cal_aeq_daily [aweight =hhweight]
+	local coef = 2300/r(mean)
+	display "Le coefficient d'ajustement est `coef'"
+	drop _merge
+
+restore
+
+
+*d = .9924144 
+*gen y=1
 drop if inlist(food_item,164,165) //Suprimer les boissons alcoolisés
-reshape wide y, i($var_lst_hh) j(food_item)
+*reshape wide y, i($var_lst_hh) j(food_item)
+*gen cons_tot_kq_aeq=q_kg_adj/aeq_cal_hh
+*gen cons_tot_kg_aeq_daily= cons_tot_kq_aeq /7
+
+* Obtenir le nombre de ménage dans le quintile
+local nb_men
+preserve 
+	quietly bysort grappe menage: keep if _n==1
+	quietly summarize hhweight, meanonly
+	local nb_men = r(sum)
+	display "Nombre de ménage du quintile: `nb_men'"
+restore
+
+
+
+egen refbask_unadjq = sum(cons_tot_kg_aeq_daily * hhweight), by(food_item)
+* Quantité consommée non ajustée moyenne par produit
+replace refbask_unadjq = refbask_unadjq / `nb_men'
+*** gen refbask_unadjq_final = refbask_unadjq / 2719
+*** duplicates drop food_item, force
+*** gen cal_unadjq = fd_kcal * refbask_unadjq_final * 10
+*** egen val_ref_unadjust = sum(cal_unadjq)
+
+egen refbask_unadjq_cal = sum(cal_int * hhweight), by(food_item)
+
+* Quantité de calorie non ajustée moyenne par produit
+replace refbask_unadjq_cal = refbask_unadjq_cal / `nb_men'
+
+*** gen adjustment_coef = 0.9924144
+gen refbask_adjq = refbask_unadjq * `coef'
+
+gen refbask_adjq_cal = refbask_unadjq_cal * `coef'
+
+duplicates drop food_item, force
+gen coef = `coef'
+
+replace fd_kcal = fd_kcal*10
+replace fd_pro=fd_pro*10
+replace fd_fat=fd_fat*10
+foreach i in fd_pro fd_fat fd_kcal{
+	gen `i'_refbask_adj= refbask_adjq*`i'
+}
+
+drop _merge
+/*
+keep food_item
+merge 1:m food_item using "${temp}/cal_intake_foot.dta"
+
+keep food_item fd_kcal fd_pro cons_tot_kg_aeq_daily fd_fat median_price refbask_adjq refbask_unadjq coef
+
+total cal_unadjq cal_adjq
+
+gen cal_unadjq = fd_kcal * refbask_unadjq * 10
+gen cal_adjq = fd_kcal * refbask_adjq * 10
+
+egen val_ref_unadjust = sum(cal_unadjq)
+egen val_ref_adjust = sum(cal_adjq)
+
+egen  cal_unadjq cal_adjq
 reshape long
 drop y
+*/
+
 save "${temp}/FI_q3.dta", replace
+
+
+merge m:1 food_item using "${temp}/cal_prot_fat_fi.dta"
+keep if _merge==3
+*drop if _merge==2
+drop _merge
+
+
+gen cost_refperitem=refbask_adjq*median_price
+egen cost_refbasket=sum(cost_refperitem), by ($var_lst_hh)
+
+* Create values for groups for the reference basket
+//Créer des valeurs pour les groupes du panier de référence
+*duplicates drop s5ano s5aitem, force ?????
+gen group=.
+
+* FOOD GROUP
+* NOTE: Create the food groups for the food items in the survey
+*replace group=/*GROUP_NBR*/ if /*FOOD_ITEM_VARIABLE*/	/*=><=*/ 	/*RANGE_CATEGORY*/
+//Créer les groupes d'aliments pour les aliments de l'enquête
+replace group=item_grp
+
+
+
+order group refbask_unadjq refbask_unadjq_cal refbask_adjq fd_kcal_refbask_adj fd_pro_refbask_adj fd_fat_refbask_adj cost_refperitem
+
+collapse (sum) refbask_unadjq refbask_unadjq_cal refbask_adjq fd_kcal_refbask_adj fd_pro_refbask_adj fd_fat_refbask_adj cost_refperitem (first) grp_desc, by(group)
+
+* 3.4 Export Outcomes:
+
+* Create table: adjustment of quantities to construct a basket of food items that yields 2'950 calories per day
+//Créer table : ajustement des quantités pour construire un panier de denrées alimentaires qui donne 2'950 calories par jour
+preserve
+keep group refbask_unadjq refbask_unadjq_cal refbask_adjq fd_kcal_refbask_adj fd_pro_refbask_adj fd_fat_refbask_adj
+xpose, clear varname
+egen v_f_1=rowtotal(v1-v8)
+xpose, clear
+export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table 3_raw") cell(C3) firstrow(var) sheetmodify
+restore
+
+* Create table: Basket of food items that yields 2'950 calories per day
+// Panier de denrées alimentaires qui produit 2'950 calories par jour
+
+preserve
+foreach i in refbask_adjq fd_kcal_refbask_adj cost_refperitem {
+	gen `i'_m= (`i'*365)/12 
+	egen `i'_m_t=total (`i'_m)
+	gen sh_`i'=(`i'_m/`i'_m_t)*100
+	drop `i'_m_t
+}
+keep group refbask_adjq_m fd_kcal_refbask_adj_m cost_refperitem_m sh_fd_kcal_refbask_adj sh_cost_refperitem
+xpose, clear varname
+egen v_f_1=rowtotal(v1-v8)
+xpose, clear
+order group refbask_adjq_m fd_kcal_refbask_adj_m cost_refperitem_m sh_fd_kcal_refbask_adj sh_cost_refperitem 
+export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table 5_raw") cell(C3) firstrow(var) sheetmodify
+restore
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*************************
 
 * 3.2 Create dataset for food consumption in quintile of reference and merge with adult equivalent coefficients
 *3.2 Créer un ensemble de données pour la consommation alimentaire dans le quintile de référence et fusionner avec les coefficients équivalents adultes
@@ -318,3 +480,6 @@ replace hhsize2=10 if hhsize>10
 tabstat ae_coef_hh aeq_cal_hh [aw=hhweight], by( hhsize2)
 mean ae_coef_hh aeq_cal_hh [aw=hhweight]
 drop hhsize2
+
+
+/*************************
