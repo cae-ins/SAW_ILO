@@ -27,31 +27,45 @@ duplicates drop /*FOOD_ITEM_VARIABLE*/ median_price, force
 sort /*FOOD_ITEM_VARIABLE*/
 drop /*FOOD_ITEM_VARIABLE*/=/*ALCOHOLIC_VARIABLES*/
 */
-	use "$data\s07b_me_CIV2021.dta", clear
-	merge m:1 grappe menage using "${data}/ehcvm_welfare_2b_CIV2021.dta" ,keepusing (region)
-	keep if region == 1 // Pour ne rester que dans Abidjan
-	drop _merge
-	keep if s07bq02==1
-	preserve
-		use "${data}/ehcvm_nsu_CIV2021.dta", clear
-		keep if s00q01 == 1 // Pour ne rester que dans Abidjan
-		rename (produitID uniteID tailleID) (food_item unite taille)
-		collapse (median) poids, by(food_item unite taille)
-		sort food_item unite taille
-		save "${temp}/base_nsu_abj.dta", replace
-	restore
-	rename (s07bq01 s07bq03a s07bq03b s07bq03c) (food_item qte unite taille)
-	merge m:1 food_item unite taille using "${temp}/base_nsu_abj.dta"
-	keep if _merge==3
-	drop _merge
-	
-* Quantity units - purchased items
-gen	quantity_Kg=.						
-replace quantity_Kg=qte*poids/1000
+
+use "${data}/ehcvm_nsu_CIV2021.dta", clear
+keep if s00q01 == 1 // Pour ne rester que dans Abidjan
+		rename (produitID uniteID tailleID) (codpr unite_achat taille_achat)
+		collapse (median) poids, by(codpr unite_achat taille_achat)
+		sort codpr unite_achat taille_achat
+		merge 1:m codpr unite_achat taille_achat using "${food}"
+		keep if _merge==3
+		gen qte_achat_kg=qte_achat*poids/1000
+		gen price_unit=price_achat/qte_achat_kg
+
+* Déflater les prix unitaires
+
+/*Application des déflateurs sur les prix */
+cap frame drop deflateur
+frame create deflateur
+frame deflateur {
+	use "${data}/deftemp.dta", clear
+	mkmat deftemp_2022_2021 deftemp_2023_2022 deftemp_2024_2023, mat(deftemp)
+	matrix rownames deftemp = Alimentation "Autres biens essentiels" Education Logement "Santé" Exclure "Composites 4 composantes"
+}
+
+/* Calcul des prix unitaires déflatés */
+
+local i = 1
+foreach dep in price_unit {
+	replace `dep' = `dep' * deftemp[`i',1] * deftemp[`i',2] * deftemp[`i',3]
+	local i = `i' + 1
+}
+rename codpr food_item
+
+**** Winzoriser les prix unitaires par produits
+ssc install winsor2
+winsor2 price_unit, cuts(1 99) by(food_item)
 
 * Gen price per unit (Kg)
-gen price_unit=s07bq08/quantity_Kg
+*gen price_unit=s07bq08/quantity_Kg
 egen median_price= median(price_unit), by(food_item)
+egen mean_price= mean(price_unit), by(food_item)
 keep food_item median_price
 duplicates drop food_item median_price, force
 sort food_item
@@ -85,7 +99,7 @@ tabstat cal_day_aeq  [aw=hhweight*hhsize], by( quintile)
 */
 
 //Quintile de référence
-keep if quintile==5 //Quintile dont la quantité de calorie est de 2300kcal qui correspond au seuil de pauvreté
+keep if quintile==3 //Quintile dont la quantité de calorie est de 2300kcal qui correspond au seuil de pauvreté
 *keep $var_lst_hh food_item
 
 *Consommation calorique du quintile 3 sans les fafh

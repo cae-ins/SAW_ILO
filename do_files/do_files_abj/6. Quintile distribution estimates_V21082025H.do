@@ -113,7 +113,7 @@ restore
 
 preserve
 use "${temp}/expenditures_temp_pc.dta", clear
-keep if quintile == 5
+keep if quintile == 3
 
 collapse (mean) aeq_cal_hh ae_coef_hh [aweight =hhweight], by (hhsize)
 export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table aeq") cell(C3) firstrow(var) sheetmodify
@@ -137,7 +137,7 @@ drop _merge
 replace depan = depan / 12 // En mensuel
 replace depan = depan / ae_coef_hh // En équivalent adulte
 replace depan = depan * deftemp[2,1] * deftemp[2,2] * deftemp[2,3]
-keep if quintile==5
+keep if quintile==3
 
 * Obtenir le nombre de ménage dans le quintile
 local nb_men

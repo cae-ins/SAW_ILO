@@ -95,7 +95,7 @@ save "${temp}/cal_hh_temp.dta", replace
 		keep if region != 1 & milieu == 2 // Pour ne rester que dans autres Rural
 		drop _merge
 		collapse (sum) fafh_exp=s07aq, by(grappe menage)
-		gen fafh_exp_month=fafh_exp/30
+		*gen fafh_exp_month=fafh_exp/30
 		save "${temp}/food_exp_ext.dta", replace
 	restore
 	merge 1:1 $var_lst_hh using "${temp}/food_exp_ext.dta"
@@ -108,9 +108,9 @@ save "${temp}/cal_hh_temp.dta", replace
 
 	* Estimate calorie consumption from fafh using price per calorie
 	//Estimez la consommation de calories à partir de fafh à l'aide du prix par calorie
-	gen cal_fafh_m=fafh_exp_month/price_percal_hh //Quantité de calorie par ménage
-	replace cal_fafh_m=fafh_exp_month/medianprice if price_percal_hh==.
-	gen cal_fafh_d=(cal_fafh_m*12)/365
+	gen cal_fafh=fafh_exp/price_percal_hh //Quantité de calorie par ménage
+	replace cal_fafh=fafh_exp/medianprice if price_percal_hh==.
+	gen cal_fafh_d=cal_fafh/7
 	keep $var_lst_hh cal_fafh_d
 	save "${temp}/cal_fafh_temp.dta", replace
 

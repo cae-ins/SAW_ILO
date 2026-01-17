@@ -296,7 +296,7 @@ restore
 		drop interview__key interview__id vague s11*
 		keep  Ct_loyer_scormin Ct_charg_scor_min CT_log_scoremin
 		duplicates drop
-		gen tail_eaqu=3.38
+		gen tail_eaqu=3.42
 		gen CT_familleaeq=CT_log_scoremin*tail_eaqu
 		replace CT_familleaeq=round(CT_familleaeq)/* echelle OCED du menage cor 3.29*/
 		di CT_familleaeq /*14630 fr cfa le cout total d'une famille de 5 personne en equi adui*/

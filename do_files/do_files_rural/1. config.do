@@ -8,7 +8,7 @@
 
 * 1. Define working directory
 
-global projet "C:\Users\aj.kouassi\OneDrive\CAE\EHCVM 2021\Last_Version"
+global projet "C:\Users\user\OneDrive\CAE\EHCVM 2021\Last_Version"
 *global projet "D:\DOCUMENTS\CAE\EHCVM 2021\Last_Version" // Insert the working path
 
 * 2. Directory paths

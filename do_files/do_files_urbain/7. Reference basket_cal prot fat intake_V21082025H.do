@@ -85,7 +85,7 @@ tabstat cal_day_aeq  [aw=hhweight*hhsize], by( quintile)
 */
 
 //Quintile de référence
-keep if quintile==4 //Quintile dont la quantité de calorie est de 2300kcal qui correspond au seuil de pauvreté
+keep if quintile==3 //Quintile dont la quantité de calorie est de 2300kcal qui correspond au seuil de pauvreté
 *keep $var_lst_hh food_item
 
 *Consommation calorique du quintile 3 sans les fafh
