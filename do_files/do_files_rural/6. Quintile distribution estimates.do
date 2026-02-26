@@ -53,6 +53,7 @@ merge 1:1 $var_lst_hh using "${temp}/cal_intake_hh.dta"
 gen freq=1
 drop _merge
 merge m:1 $var_lst_hh using "${temp}/aeq_temp.dta"
+keep if _merge==3
 drop _merge
 *gen food_exp_aeq=food_exp/ae_coef_hh 
 tabstat total_exp_aeq food_exp_aeq hhsize cal_day_aeq ae_coef_hh [aweight =hhweight], by(quintile)
@@ -104,23 +105,10 @@ restore
 preserve
 use "${temp}/expenditures_temp_pc.dta", clear
 gen freq=1
-collapse (mean) health_exp_pc educ_exp_pc (count) freq [aweight =hhweight]
-export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table 16_1_raw") cell(C3) firstrow(var) sheetmodify
-restore
-
-preserve
-use "${temp}/expenditures_temp_pc.dta", clear
-gen freq=1
 collapse (mean) other_exp_month other_exp_month_aeq (count) freq [aweight =hhweight], by (quintile)
 export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table 17_raw") cell(C3) firstrow(var) sheetmodify
 restore
 
-preserve
-use "${temp}/expenditures_temp_pc.dta", clear
-gen freq=1
-collapse (mean) other_exp_month other_exp_month_aeq (count) freq [aweight =hhweight]
-export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table 17_1_raw") cell(C3) firstrow(var) sheetmodify
-restore
 
 
 preserve
@@ -130,6 +118,11 @@ keep if quintile == 2
 collapse (mean) aeq_cal_hh ae_coef_hh [aweight =hhweight], by (hhsize)
 export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table aeq") cell(C3) firstrow(var) sheetmodify
 restore
+
+
+
+
+
 
 
 ***** Coûts des autres biens et services par groupe
@@ -144,7 +137,7 @@ drop _merge
 replace depan = depan / 12 // En mensuel
 replace depan = depan / ae_coef_hh // En équivalent adulte
 replace depan = depan * deftemp[2,1] * deftemp[2,2] * deftemp[2,3] * deftemp[2,4]
-keep if quintile==2
+keep if quintile == 2
 
 * Obtenir le nombre de ménage dans le quintile
 local nb_men

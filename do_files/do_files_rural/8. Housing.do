@@ -11,6 +11,7 @@
 *use "${housing}", clear
 use "${temp}/housing_temp.dta", clear
 merge 1:1  $var_lst_hh using "${housing}"
+keep if _merge==3
 drop _merge
 
 
@@ -32,6 +33,7 @@ puis arrondissez la moyenne de toutes les variables.
 * 8.2.1 Space
 *on determine le nombre de personnes par pièces
 merge 1:1 grappe menage using "${data}/ehcvm_welfare_2b_CIV2021.dta", keepusing(hhsize region milieu)
+keep if _merge==3
 drop _m
 
 ***************************************************************************************************************************
@@ -127,10 +129,10 @@ preserve
 	gen toit_min=4  /*logt dec mini si toit est Tôles//Tuile
  */
 	gen sol_min=4  /*logt dec mini si sol est Ciment/Béton*/
-	gen acc_eau_min=4 /* logt dec mini si acces eau est Forage dans la concession//Forage ailleurs//Borne fontaine/Robinet public
+	gen acc_eau_min=5 /* logt dec mini si acces eau est Forage dans la concession//Forage ailleurs//Borne fontaine/Robinet public
 
 */
-	gen sanitaire_min=4 /* logt dec mini si sanitaire est Latrines ECO vip PLAT 
+	gen sanitaire_min=5 /* logt dec mini si sanitaire est Latrines ECO vip PLAT 
 */
 
 	keep surface_min mur_min toit_min sol_min acc_eau_min sanitaire_min 
@@ -144,13 +146,13 @@ preserve
 	ta  seuil_decence,m
 	order seuil_decence,before(surface_min)
 
-	ta seuil_decence /* 16  le score minimum*/
-	save "${outpts}\table_score_min.dta",replace
+	ta seuil_decence /* 18  le score minimum*/
+	save "${outputs}\table_score_min.dta",replace
 restore
 
 
 **********8.2.6.b profil des logements D°*
-	gen seuil_decence=16
+	gen seuil_decence=18
 	gen D°=100 if h_score<seuil_decence   /* 1:statut de logement non decent  */
 	replace D°=0 if D°==.
 
@@ -161,13 +163,13 @@ restore
 	tab D°[aw=hhweight]   /*38.43% des ménages vivent dans des logements non décent*/
  
 	tabstat D°[aw=hhweight]  ,by(region) 
-	*table milieu [aw=hhweight], c(mean D°) row col /* profil des logements selon les milieux de residence  *//* 38.42512% des ménages vivent dans des logements non décent en CIV, les ménages vivant en mileu urbain vivent dans 21.12914% dans des logements non décents et contre 59.21393% pour les menages vivant en rural*/
-*e
+	* table milieu [aw=hhweight], c(mean D°) row col /* profil des logements selon les milieux de residence  *//* 38.42512% des ménages vivent dans des logements non décent en CIV, les ménages vivant en mileu urbain vivent dans 21.12914% dans des logements non décents et contre 59.21393% pour les menages vivant en rural*/
+
 ** 
 ******8.2.6.c visualisation de la distribution des scores de logements ***
 **
 	histogram h_score , discrete  
-	graph export "$outpts\Graph_distrib_des_scores.png", as(png) name("Graph") replace
+	graph export "$outputs\Graph_distrib_des_scores.png", as(png) name("Graph") replace
 
 	merge 1:1  $var_lst_hh using "${temp}/housing_temp.dta"
 	drop _merge
@@ -180,13 +182,14 @@ restore
 	save "${temp}\housing_score_temp.dta", replace
 
 	merge 1:1 vague grappe menage using "${data}/ehcvm_welfare_2b_CIV2021.dta", keepusing(hhweight)
+	keep if _merge==3
 	drop _merge
 
-	*****determination de la taille equivalent adu de reference : le 2 quintile**
+	*****determination de la taille equivalent adu de reference : le 3 quintile**
     xtile quintil_rent_aeq=rent_aeq[aw=hhweight], nq(5)
 	tabstat D° ae_coef_hh rent_aeq utilities_aeq[aw=hhweight],by(quintil_rent_aeq) stat(mean)  
 
-	*3.33 correspond a un adulte par equivalent adult***
+	*3.29 correspond a un adulte par equivalent adult***
 
  
 preserve 
@@ -194,15 +197,15 @@ preserve
 	collapse (mean) rent_aeq utilities_aeq (count) freq [aweight =hhweight], by (  h_score)
 	twoway (scatter rent_aeq h_score),title(Loyer mensuel associé au score de logement décent,size(default) color(blue)) note(Estimation basée sur l’EHCVM 2021, size(small) color(black))
 
-graph export "$outpts\Graph_Loyer mensuel associé au score.png", as(png) name("Graph") replace
+graph export "$outputs\Graph_Loyer mensuel associé au score.png", as(png) name("Graph") replace
 
 	twoway (scatter utilities_aeq h_score),title(Dépenses mensuelles des charges par score de logement,size(default) color(blue))  note(Estimation basée sur l’EHCVM 2021, size(small) color(black))
 
-	graph export "$outpts\Graph_Dépenses mensuelles des charges au score.png", as(png) name("Graph") replace 
+	graph export "$outputs\Graph_Dépenses mensuelles des charges au score.png", as(png) name("Graph") replace 
 	
 	gen milieu2="National"
 	order milieu2,before(h_score)
-	export excel "${outpts}\COUNTRY_ESTIMATES.xlsx", sheet("Table 12a_raw") cell(C3) firstrow(var) sheetmodify
+	export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table 12a_raw") cell(C3) firstrow(var) sheetmodify
 	save "${temp}\rent_charge_nat_temp.dta", replace
 
 
@@ -212,7 +215,7 @@ preserve
 
 	collapse (mean) rent_month  rent_aeq utilities_aeq (p50) med_rent_m=rent_month med_rent_aeq=rent_aeq h_space h_score_space h_score_mur h_score_toit h_score_sol h_score_mat h_score_material h_score_water h_score_facilities (count) freq [aweight = hhweight] ,by(h_score)     
 	keep h_space h_score_space h_score_mur h_score_toit h_score_sol h_score_water h_score_facilities h_score
-export excel "${outpts}\COUNTRY_ESTIMATES.xlsx", sheet("Table_comoditie_logt") cell(C3) firstrow(var) sheetmodify
+export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table_comoditie_logt") cell(C3) firstrow(var) sheetmodify
 
 
 restore
@@ -227,28 +230,38 @@ restore
 preserve
 collapse (mean) rent_month rent_aeq (p50) med_rent_m=rent_month med_rent_aeq=rent_aeq (count) freq [aweight = hhweight]
 sort rent_month med_rent_m rent_aeq med_rent_aeq freq
-export excel "${outpts}\COUNTRY_ESTIMATES.xlsx", sheet("Table 9_raw") cell(C3) firstrow(var) sheetmodify
+export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table 9_raw") cell(C3) firstrow(var) sheetmodify
 restore
 
 preserve
 collapse (mean) rent_month rent_aeq (p50) med_rent_m=rent_month med_rent_aeq=rent_aeq (count) freq [aweight = hhweight], by(milieu)
 sort rent_month med_rent_m rent_aeq med_rent_aeq freq
-export excel "${outpts}\COUNTRY_ESTIMATES.xlsx", sheet("Table loyer_milieu") cell(C3) firstrow(var) sheetmodify
+export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table loyer_milieu") cell(C3) firstrow(var) sheetmodify
 restore
 
 preserve
 collapse (mean) rent_month rent_aeq (p50) med_rent_m=rent_month med_rent_aeq=rent_aeq (count) freq [aweight = hhweight], by(region)
 sort rent_month med_rent_m rent_aeq med_rent_aeq freq
-export excel "${outpts}\COUNTRY_ESTIMATES.xlsx", sheet("Table loyer_region") cell(C3) firstrow(var) sheetmodify
+export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table loyer_region") cell(C3) firstrow(var) sheetmodify
 restore
 
-***** B-EVALUATION DU COUT DE LOYER ET CHARGE  SELON LE SCORE DE DECENCE MINIMAL D°= 16 
+***** B-EVALUATION DU COUT DE LOYER ET CHARGE  SELON LE SCORE DE DECENCE MINIMAL D°= 14 
 ********************************************************************************
-                      ////*** ZONE NATIONALE ********////
-			*1- Determination du cout de loyer décent de score  16 
+      
+	  
+	  *** Winsorization
+	  *ssc install winsor
+	  winsor2 rent_aeq, cuts(5 95) suffix(_w)
+	  winsor2 utilities_aeq, cuts(5 95) suffix(_w)
+	   
+	   
+	   
+	   ////*** ZONE NATIONALE ********////
+			*1- Determination du cout de loyer décent de score  14 
 
+			
 		
-		nl (rent_aeq={A}*(exp({b}*h_score))) /*regression exponentiel du cout loyer (rent_aeq) sur le score final*/
+		nl (rent_aeq_w={A}*(exp({b}*h_score))) /*regression exponentiel du cout loyer (rent_aeq) sur le score final*/
 		ereturn list
 		matrix list e(b)  /* on visualise et recupere les coef des parametres*/
 		gen coef_A=_b[/A ]    
@@ -258,20 +271,20 @@ restore
 	
 	**calcul du cout loyer pour le score minimum de decence de logement de à partir des coef_A, coef_b des parametre de regression exponentiel***
 	
-		gen Ct_loyer_scormin=coef_A*exp(coef_b*16)
+		gen Ct_loyer_scormin=coef_A*exp(coef_b*18)
 		di Ct_loyer_scormin
     /*le coût du loyer pour un logement minimum décent au niveau national s’élève à 3340.1436 F CFA pour 1 adulte par équivalent adulte.*/
 
 			*2- Determination du cout de charge de score 14      
 	
-		nl (utilities_aeq={C}*(exp({d}*h_score))) /*regression exponentiel du cout des charge sur le score final*/
+		nl (utilities_aeq_w={C}*(exp({d}*h_score))) /*regression exponentiel du cout des charge sur le score final*/
 		
 		matrix list e(b)
 		gen coef_C=_b[/C ]
 		gen coef_d=_b[/d]
 		di coef_C /*coef_C= 14.249012*/
 		di coef_d /*coef_d=  .30735463*/
-		gen Ct_charg_scor_min=coef_C*exp(coef_d*16)
+		gen Ct_charg_scor_min=coef_C*exp(coef_d*18)
 		di Ct_charg_scor_min /*1053.2673 FCFA est la charge pour un logement au niveau national*/
 	
 			*3-Estimation du cout mensuel total (loyer+charge = CT_log_scoremin)                                               *
@@ -283,18 +296,16 @@ restore
 		drop interview__key interview__id vague s11*
 		keep  Ct_loyer_scormin Ct_charg_scor_min CT_log_scoremin
 		duplicates drop
-		gen tail_eaqu=ae_coefhh
+		gen tail_eaqu=3.26
 		gen CT_familleaeq=CT_log_scoremin*tail_eaqu
-		replace CT_familleaeq=round(CT_familleaeq)/* echelle OCED du menage cor 3.33*/
+		replace CT_familleaeq=round(CT_familleaeq)/* echelle OCED du menage cor 3.29*/
 		di CT_familleaeq /*14630 fr cfa le cout total d'une famille de 5 personne en equi adui*/
 		
 		gen Pays="Côte d'Ivoire"
 		order Pays,before(Ct_loyer_scormin)
-		save "${temp}\loyer_decence.dta",replace
+		*save "${temp}\base_loyer_decence_National.dta",replace
 
 
-export excel "${outpts}\COUNTRY_ESTIMATES.xlsx", sheet("Table CT_familleaeq") cell(C3) firstrow(var) sheetmodify
-
-
+export excel "${outputs}\COUNTRY_ESTIMATES.xlsx", sheet("Table CT_familleaeq") cell(C3) firstrow(var) sheetmodify
 
 

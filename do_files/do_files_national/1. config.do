@@ -8,8 +8,7 @@
 
 * 1. Define working directory
 
-global projet "C:\Users\f.migone\OneDrive - GOUVCI\Etude_OIT_Estimation_Salaire_Vital\Analyse\SAW_ANSTAT_April_2025"
-
+global projet "C:\Users\user\OneDrive\CAE\EHCVM 2021\Last_Version"
 *global projet "D:\DOCUMENTS\CAE\EHCVM 2021\Last_Version" // Insert the working path
 
 * 2. Directory paths

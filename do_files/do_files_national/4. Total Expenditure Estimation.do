@@ -222,8 +222,8 @@ foreach m of local expenditures {
 cap frame drop deflateur
 frame create deflateur
 frame deflateur {
-	use "${data}/deftemp.dta", clear
-	mkmat deftemp_2022_2021 deftemp_2023_2022 deftemp_2024_2023, mat(deftemp)
+	use "${data}/deftemp_2025.dta", clear
+	mkmat deftemp_2022_2021 deftemp_2023_2022 deftemp_2024_2023 deftemp_2025_2024, mat(deftemp)
 	matrix rownames deftemp = Alimentation "Autres biens essentiels" Education Logement "Santé" Exclure "Composites 4 composantes"
 }
 
@@ -231,7 +231,7 @@ frame deflateur {
 
 local i = 1
 foreach dep in food_exp other_exp_month educ_exp_hh_month housing_exp_month  health_exp_month{
-	replace `dep' = `dep' * deftemp[`i',1] * deftemp[`i',2] * deftemp[`i',3]
+	replace `dep' = `dep' * deftemp[`i',1] * deftemp[`i',2] * deftemp[`i',3] * deftemp[`i',4]
 	local i = `i' + 1
 }
 

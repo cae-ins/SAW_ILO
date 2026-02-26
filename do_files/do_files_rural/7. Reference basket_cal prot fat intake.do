@@ -28,6 +28,7 @@ sort /*FOOD_ITEM_VARIABLE*/
 drop /*FOOD_ITEM_VARIABLE*/=/*ALCOHOLIC_VARIABLES*/
 */
 use "${data}/ehcvm_nsu_CIV2021.dta", clear
+keep if s00q01 != 1 & s00q04 == 2 // Pour ne rester que dans autres Rural
 		rename (produitID uniteID tailleID) (codpr unite_achat taille_achat)
 		collapse (median) poids, by(codpr unite_achat taille_achat)
 		sort codpr unite_achat taille_achat
@@ -57,7 +58,7 @@ foreach dep in price_unit {
 rename codpr food_item
 
 **** Winzoriser les prix unitaires par produits
-*ssc install winsor2
+ssc install winsor2
 winsor2 price_unit, cuts(1 99) by(food_item)
 
 * Gen price per unit (Kg)

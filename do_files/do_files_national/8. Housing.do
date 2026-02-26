@@ -130,7 +130,7 @@ preserve
 	gen acc_eau_min=5 /* logt dec mini si acces eau est Forage dans la concession//Forage ailleurs//Borne fontaine/Robinet public
 
 */
-	gen sanitaire_min=4 /* logt dec mini si sanitaire est Latrines ECO vip PLAT 
+	gen sanitaire_min=5 /* logt dec mini si sanitaire est Latrines ECO vip PLAT 
 */
 
 	keep surface_min mur_min toit_min sol_min acc_eau_min sanitaire_min 
@@ -144,13 +144,13 @@ preserve
 	ta  seuil_decence,m
 	order seuil_decence,before(surface_min)
 
-	ta seuil_decence /* 17  le score minimum*/
+	ta seuil_decence /* 18  le score minimum*/
 	save "${outputs}\table_score_min.dta",replace
 restore
 
 
 **********8.2.6.b profil des logements D°*
-	gen seuil_decence=17
+	gen seuil_decence=18
 	gen D°=100 if h_score<seuil_decence   /* 1:statut de logement non decent  */
 	replace D°=0 if D°==.
 
@@ -268,7 +268,7 @@ restore
 	
 	**calcul du cout loyer pour le score minimum de decence de logement de à partir des coef_A, coef_b des parametre de regression exponentiel***
 	
-		gen Ct_loyer_scormin=coef_A*exp(coef_b*17)
+		gen Ct_loyer_scormin=coef_A*exp(coef_b*18)
 		di Ct_loyer_scormin
     /*le coût du loyer pour un logement minimum décent au niveau national s’élève à 3340.1436 F CFA pour 1 adulte par équivalent adulte.*/
 
@@ -281,7 +281,7 @@ restore
 		gen coef_d=_b[/d]
 		di coef_C /*coef_C= 14.249012*/
 		di coef_d /*coef_d=  .30735463*/
-		gen Ct_charg_scor_min=coef_C*exp(coef_d*17)
+		gen Ct_charg_scor_min=coef_C*exp(coef_d*18)
 		di Ct_charg_scor_min /*1053.2673 FCFA est la charge pour un logement au niveau national*/
 	
 			*3-Estimation du cout mensuel total (loyer+charge = CT_log_scoremin)                                               *
@@ -293,7 +293,7 @@ restore
 		drop interview__key interview__id vague s11*
 		keep  Ct_loyer_scormin Ct_charg_scor_min CT_log_scoremin
 		duplicates drop
-		gen tail_eaqu=3.29
+		gen tail_eaqu=3.27
 		gen CT_familleaeq=CT_log_scoremin*tail_eaqu
 		replace CT_familleaeq=round(CT_familleaeq)/* echelle OCED du menage cor 3.29*/
 		di CT_familleaeq /*14630 fr cfa le cout total d'une famille de 5 personne en equi adui*/
